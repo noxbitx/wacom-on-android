@@ -1,0 +1,8 @@
+## Requirements
+
+- **Rooted Android** (Magisk, KernelSU, etc.)
+- **Termux** with `tsu` or `su`
+- **USB OTG cable**
+- **Wacom Intuos CTL-480** (or compatible)
+- **Stylus-aware app** (Infinite Painter, Medibang, Sketchbook)
+- pyusb>=1.2.1
