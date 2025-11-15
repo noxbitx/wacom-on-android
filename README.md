@@ -1,6 +1,4 @@
-You’re absolutely right — my bad! Here’s the clean, copy-paste-ready README.md with perfect formatting, no blending, and 100% selectable.
 
-`README.md` — Professional & Copy-Paste Ready
 # Wacom Android Userspace Driver
 
 ### *Turn any rooted Android tablet into a full Wacom Intuos*
