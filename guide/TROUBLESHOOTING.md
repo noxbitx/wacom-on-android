@@ -3,7 +3,7 @@
 
 ## `docs/TROUBLESHOOTING.md`
 
-```md
+
 # Troubleshooting
 
 | Issue | Fix |
