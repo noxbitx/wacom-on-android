@@ -3,6 +3,15 @@
 Wacom CTL-480 (Intuos PS) Userspace Driver for Android
 Reads tablet via libusb and injects as stylus input via uinput
 """
+# wacom_driver.py
+# Copyright (C) 2025  [Your Name]
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
 import subprocess
 import usb.core
 import usb.util
