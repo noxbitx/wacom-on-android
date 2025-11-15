@@ -26,7 +26,7 @@
 
 ---
 
-## Demo
+## Demo ( Coming soon )
 
 ![Hover + Pressure](screenshots/hover.jpg)  
 *Hovering shows cursor. Pressure changes stroke weight in Infinite Painter.*
@@ -50,68 +50,45 @@
 
 
 # 1. Install Termux packages
-pkg install python libusb git
+- pkg install python libusb git
 
 # 2. Install Python deps
-pip install pyusb
+- pip install pyusb
 
 # 3. Clone & run
-git clone https://github.com/yourname/wacom-android-userspace-driver
-cd wacom-android-userspace-driver/src
-tsu
-python wacom_driver.py
-Press Ctrl+C to stop.
+- git clone https://github.com/yourname/wacom-android-userspace-driver
+- cd wacom-android-userspace-driver/src
+- tsu
+- python wacom_driver.py
+- Press Ctrl+C to stop.
 
-Configuration
-Edit src/wacom_driver.py:
-SCREEN_WIDTH = 2048
-SCREEN_HEIGHT = 1536
+## Configuration
+- Edit src/wacom_driver.py:
+- SCREEN_WIDTH = 2048
+- SCREEN_HEIGHT = 1536
 
 # Pressure curve (easier max pressure)
-PRESSURE_EASING = 1.8
-PRESSURE_OFFSET = 50
-PRESSURE_CLAMP_MIN = 100
+- PRESSURE_EASING = 1.8
+- PRESSURE_OFFSET = 50
+- PRESSURE_CLAMP_MIN = 100
 
-Tested On
-Device
-ROM
-Kernel
-Status
-Samsung Galaxy Tab S2
-LineageOS 21
-3.10.108
-Supported
-Any rooted Android
-Any
-3.10+ with uinput
-Supported
+## Troubleshooting
+- See TROUBLESHOOTING.md
 
-Troubleshooting
-See TROUBLESHOOTING.md
+## License
+- MIT License — Free to use, modify, and distribute.
 
-License
-MIT License — Free to use, modify, and distribute.
-
-Credits
-	•	Wacom HID report format: Linux hid-wacom driver
-	•	uinput legacy API: Linux kernel docs
-	•	You: @yourusername — for resurrecting old hardware
+## Credits
+- Wacom HID report format: Linux hid-wacom driver
+- uinput legacy API: Linux kernel docs
+- @noxbitx — for resurrecting old hardware
 
 “Why spend $40 on a half-working stylus when you can run a real Wacom for free?”
 
 ---
 
-## How to Use
 
-1. **Copy everything above** (from `# Wacom Android Userspace Driver` to the last `---`)
-2. **Paste into `README.md`** in your repo root
-3. **Replace `yourname`** with your GitHub username
-4. **Add images** to `screenshots/` folder
-
----
-
-
-[![Stars](https://img.shields.io/github/stars/yourname/wacom-android-userspace-driver?style=social)](#)
-[![Forks](https://img.shields.io/github/forks/yourname/wacom-android-userspace-driver?style=social)](#)
+[![Stars](https://img.shields.io/github/stars/noxbitx/wacom-on-android?style=social)](#)
+[![Forks](https://img.shields.io/github/forks/noxbitx/wacom-on-android?style=social)](#)
 
 
