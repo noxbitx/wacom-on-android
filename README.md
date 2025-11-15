@@ -1,96 +1,60 @@
+# Wacom Android Userspace Driver  
+### *Turn any rooted Android tablet into a full Wacom Intuos*
 
-# Wacom CTL-480 Driver Port for Android (SM-T819 / MSM8976)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Android 14 Tested](https://img.shields.io/badge/Android-14%20Tested-green)](#)
 
-WARNING: This driver porting process is extremely difficult. Proceed only if you’ve got stable mental firmware.
-
-DISCLAIMER: I am not responsible for bricked devices, kernel panics, or spontaneous combustion. You know the drill.
-
-
----
-
-Status: In Progress
-
-Target Kernel: android_kernel_samsung_msm8976-lineage-16.0
-Platform: Samsung Galaxy Tab S2 9.7 (SM-T819)
-Tablet: Wacom CTL-480 (USB, 5V 100mA)
-Environment: OTG-powered (3.5V), rooted Android 14 LineageOS 21
-
+> **No kernel modules. No recompilation. Full hover, pressure, and undo/redo.**  
+> Works on **Samsung Galaxy Tab S2 (LineageOS 21)** — and any rooted Android with `/dev/uinput`.
 
 ---
 
-What This Project Is
+## Features
 
-This is a highly experimental driver porting project that brings Wacom CTL-480 pen tablet support to a rooted Android tablet running a custom kernel.
-
-Goal: Achieve full pen + hover detection using custom-compiled kernel modules and modified input drivers.
-Why? Because drawing on a tablet that wasn’t meant for this is peak chaos engineering—and I’m all for it.
-
-
----
-
-Features
-
-[x] Kernel source tree prepared
-
-[x] modules_prepare success
-
-[x] Wacom driver files (wacom_sys.c / wacom_wac.c) merged into wacom.c
-
-[x] Compilation flags + defines resolved
-
-[x] HID macros conflict resolved
-
-[x] Compilation errors mapped and fixed
-
-[ ] modpost completed
-
-[ ] Working .ko module
-
-[ ] Tested on-device
-
-[ ] Stable pen + hover detection
-
-[ ] Voltage-based stability tests
-
-
+| Feature | Status |
+|-------|--------|
+| Hover cursor | Supported |
+| 2048-level pressure | Supported (tunable) |
+| Tip click & barrel buttons | Supported |
+| Button 1 → **Undo (Ctrl+Z)** | Supported |
+| Button 2 → **Redo (Ctrl+Y)** | Supported |
+| 100% active area mapping | Supported |
+| Pure Python + `libusb` + `uinput` | Supported |
 
 ---
 
-Notes
+## Demo
 
-Power draw through OTG is limited to ~3.5V. The tablet likely steps it up internally, but stylus hover distance might be shorter.
+![Hover + Pressure](screenshots/hover.jpg)  
+*Hovering shows cursor. Pressure changes stroke weight in Infinite Painter.*
 
-Future patching may include timing tweaks for low-voltage behavior, once the basics are stable.
-
-Every error, fix, and kernel interaction is being documented and explained—for future devs who dare follow this path.
-
-
+![Undo/Redo GIF](screenshots/undo_redo.gif)  
+*Barrel buttons trigger Ctrl+Z / Ctrl+Y in any app.*
 
 ---
 
-Screenshot Dump
+## Requirements
 
-(Coming soon)
-
-
----
-
-Explanation: soon
-
-A full guide is being written, covering:
-
-Kernel macro landmines
-
-Header conflicts
-
-HID struct duplications
-
-Why recordmcount hates you
-
-And how to survive make with your sanity intact
-
-
+- **Rooted Android** (Magisk, KernelSU, etc.)
+- **Termux** with `tsu` or `su`
+- **USB OTG cable**
+- **Wacom Intuos CTL-480** (or compatible)
+- **Stylus-aware app** (Infinite Painter, Medibang, Sketchbook)
 
 ---
 
-Stay tuned. This rabbit hole goes deep.
+## Quick Start
+
+```bash
+# 1. Install Termux packages
+pkg install python libusb git
+
+# 2. Install Python deps
+pip install pyusb
+
+# 3. Clone & run
+git clone https://github.com/yourname/wacom-android-userspace-driver
+cd wacom-android-userspace-driver/src
+tsu
+python wacom_driver.py
