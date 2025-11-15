@@ -1,18 +1,9 @@
-
 #!/data/data/com.termux/files/usr/bin/python
 """
 Wacom CTL-480 (Intuos PS) Userspace Driver for Android
 Reads tablet via libusb and injects as stylus input via uinput
 """
-# wacom_driver.py
-# Copyright (C) 2025  Noxbit
-# SPDX-License-Identifier: GPL-3.0-or-later
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-
+import subprocess
 import usb.core
 import usb.util
 import struct
@@ -114,7 +105,7 @@ class UInputDevice:
         try:
             self.fd = os.open(UINPUT_PATH, os.O_WRONLY | os.O_NONBLOCK)
         except PermissionError:
-            print("Error: Need root access. Run with 'su'")
+            print("Error: Need root access. Run with 'tsu'")
             sys.exit(1)
         except FileNotFoundError:
             print("Error: /dev/uinput not found. Kernel might not support uinput")
@@ -231,20 +222,22 @@ class WacomDriver:
         self.last_x = 0
         self.last_y = 0
         self.in_range = False
+        self.button1_pressed = False
+        self.button2_pressed = False
 
     def connect(self):
         """Find and connect to Wacom tablet"""
         print(f"Looking for Wacom tablet {WACOM_VENDOR_ID:04x}:{WACOM_PRODUCT_ID:04x}...")
-        
+
         self.device = usb.core.find(idVendor=WACOM_VENDOR_ID, idProduct=WACOM_PRODUCT_ID)
-        
+
         if self.device is None:
             print("Error: Wacom tablet not found!")
             print("Make sure it's plugged in via OTG")
             return False
-        
+
         print(f"✓ Found: {self.device.manufacturer} {self.device.product}")
-        
+
         # Detach kernel driver if active
         if self.device.is_kernel_driver_active(0):
             try:
@@ -252,13 +245,13 @@ class WacomDriver:
                 print("✓ Detached kernel driver")
             except usb.core.USBError as e:
                 print(f"Warning: Could not detach kernel driver: {e}")
-        
+
         # Set configuration
         try:
             self.device.set_configuration()
         except usb.core.USBError:
             pass  # Already configured
-        
+
         # Get endpoint (usually interface 0, endpoint 1 IN)
         cfg = self.device.get_active_configuration()
         intf = cfg[(0, 0)]
@@ -266,11 +259,11 @@ class WacomDriver:
             intf,
             custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_IN
         )
-        
+
         if self.endpoint is None:
             print("Error: Could not find input endpoint")
             return False
-        
+
         print(f"✓ Using endpoint 0x{self.endpoint.bEndpointAddress:02x}")
         return True
 
@@ -278,31 +271,31 @@ class WacomDriver:
         """Parse Wacom HID report"""
         if len(data) < 10:
             return None
-        
+
         # CTL-480 report format (stylus):
         # [0]: Report ID (usually 0x10 for stylus)
         # [1]: Status byte (in-range, tip switch, buttons)
         # [2-3]: X coordinate (little-endian)
         # [4-5]: Y coordinate (little-endian)
         # [6-7]: Pressure (little-endian)
-        
+
         report_id = data[0]
-        
+
         # Only handle stylus reports
         if report_id not in [0x10, 0x02]:
             return None
-        
+
         status = data[1]
         in_range = bool(status & 0x20)  # Pen in proximity
         tip_switch = bool(status & 0x01)  # Pen touching
         button1 = bool(status & 0x02)  # Lower button
         button2 = bool(status & 0x04)  # Upper button
-        
+
         # Parse coordinates (little-endian 16-bit)
         x = struct.unpack('<H', bytes(data[2:4]))[0]
         y = struct.unpack('<H', bytes(data[4:6]))[0]
         pressure = struct.unpack('<H', bytes(data[6:8]))[0]
-        
+
         return {
             'in_range': in_range,
             'tip_switch': tip_switch,
@@ -317,18 +310,18 @@ class WacomDriver:
         """Map tablet coordinates to screen coordinates"""
         screen_x = int((tablet_x / TABLET_MAX_X) * SCREEN_WIDTH)
         screen_y = int((tablet_y / TABLET_MAX_Y) * SCREEN_HEIGHT)
-        
+
         # Clamp to screen bounds
         screen_x = max(0, min(SCREEN_WIDTH, screen_x))
         screen_y = max(0, min(SCREEN_HEIGHT, screen_y))
-        
+
         return screen_x, screen_y
 
     def process_event(self, report):
         """Process parsed report and send input events"""
         if report is None:
             return
-        
+
         # Handle proximity change
         if report['in_range'] != self.in_range:
             self.uinput.send_event(EV_KEY, BTN_TOOL_PEN, 1 if report['in_range'] else 0)
@@ -360,14 +353,18 @@ class WacomDriver:
             # === STYLUS BUTTONS → UNDO / REDO ===
             # Button 1 (lower): Undo (Ctrl+Z)
             # Button 2 (upper): Redo (Ctrl+Y)
-            if report['button1']:
+            if report['button1'] and not self.button1_pressed:
                 self.send_key_combo(KEY_LEFTCTRL, KEY_Z)
-            elif report['button2']:
+            if report['button2'] and not self.button2_pressed:
                 self.send_key_combo(KEY_LEFTCTRL, KEY_Y)
-            else:
-                # Release buttons if not pressed
-                self.uinput.send_event(EV_KEY, BTN_STYLUS, 0)
-                self.uinput.send_event(EV_KEY, BTN_STYLUS2, 0)
+
+            # Update button state
+            self.button1_pressed = report['button1']
+            self.button2_pressed = report['button2']
+
+            # Always send BTN_STYLUS state (for apps that read it)
+            self.uinput.send_event(EV_KEY, BTN_STYLUS, 1 if report['button1'] else 0)
+            self.uinput.send_event(EV_KEY, BTN_STYLUS2, 1 if report['button2'] else 0)
 
             self.uinput.sync()
 
@@ -377,6 +374,7 @@ class WacomDriver:
             self.uinput.send_event(EV_KEY, BTN_TOUCH, 0)
             self.uinput.send_event(EV_KEY, BTN_STYLUS, 0)
             self.uinput.send_event(EV_KEY, BTN_STYLUS2, 0)
+
             self.uinput.sync()
 
     def send_key_combo(self, mod_key, key):
@@ -394,23 +392,23 @@ class WacomDriver:
         print("\n=== Wacom Driver Active ===")
         print("Move your stylus on the tablet!")
         print("Press Ctrl+C to stop\n")
-        
+
         try:
             while True:
                 try:
                     # Read data from tablet (timeout 100ms)
                     data = self.endpoint.read(self.endpoint.wMaxPacketSize, timeout=100)
-                    
+
                     # Parse and process
                     report = self.parse_report(data)
                     self.process_event(report)
-                    
+
                 except usb.core.USBTimeoutError:
                     continue
                 except usb.core.USBError as e:
                     print(f"USB Error: {e}")
                     break
-                    
+
         except KeyboardInterrupt:
             print("\n\nStopping driver...")
         finally:
@@ -429,7 +427,7 @@ def main():
     # Check if running as root
     if os.geteuid() != 0:
         print("Error: This script needs root access")
-        print("Run with: su -c 'python wacom_driver_fixed_v2.py'")
+        print("Run with: tsu 'python wacom_driver.py'")
         return 1
 
     driver = WacomDriver()
