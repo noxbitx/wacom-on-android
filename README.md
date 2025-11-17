@@ -56,8 +56,8 @@
 - pip install pyusb
 
 # 3. Clone & run
-- git clone https://github.com/yourname/wacom-android-userspace-driver
-- cd wacom-android-userspace-driver/src
+- git clone https://github.com/noxbitx/wacom-on-android
+- cd wacom-on-android/src
 - tsu
 - python wacom_driver.py
 - Press Ctrl+C to stop.
