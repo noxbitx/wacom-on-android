@@ -12,7 +12,6 @@ Reads tablet via libusb and injects as stylus input via uinput
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 
-import subprocess
 import usb.core
 import usb.util
 import struct
@@ -37,6 +36,8 @@ UI_SET_KEYBIT = 0x40045565
 UI_SET_ABSBIT = 0x40045567
 UI_DEV_CREATE = 0x5501
 UI_DEV_DESTROY = 0x5502
+UI_DEV_SETUP = 0x405c5503
+UI_ABS_SETUP = 0x401c5504
 
 BUS_USB = 0x03
 EV_SYN = 0x00
@@ -77,6 +78,19 @@ class input_event(ctypes.Structure):
         ("value", ctypes.c_int32)
     ]
 
+class uinput_setup(ctypes.Structure):
+    _fields_ = [
+        ("id", ctypes.c_uint16 * 4),
+        ("name", ctypes.c_char * 80),
+        ("ff_effects_max", ctypes.c_uint32)
+    ]
+
+class uinput_abs_setup(ctypes.Structure):
+    _fields_ = [
+        ("code", ctypes.c_uint16),
+        ("absinfo", ctypes.c_int32 * 6)
+    ]
+
 # Wacom CTL-480 constants
 
 WACOM_VENDOR_ID = 0x056a
@@ -86,7 +100,7 @@ WACOM_PRODUCT_ID = 0x030e
 
 TABLET_MAX_X = 15200
 TABLET_MAX_Y = 9500
-TABLET_MAX_PRESSURE = 2047
+TABLET_MAX_PRESSURE = 1023
 
 # Screen resolution (adjust for your Tab S2 if needed; confirm with 'wm size' in adb)
 
@@ -95,7 +109,7 @@ SCREEN_HEIGHT = 1536
 
 # === PRESSURE SCALING ===
 # Make pressure easier to reach max (adjust curve)
-PRESSURE_EASING = 1.8      # >1.0 = easier max, <1.0 = harder
+PRESSURE_EASING = 0.7      # >1.0 = easier max, <1.0 = harder
 PRESSURE_OFFSET = 50       # Ignore very light touches
 PRESSURE_CLAMP_MIN = 100   # Minimum output when touching
 
@@ -114,7 +128,7 @@ class UInputDevice:
         try:
             self.fd = os.open(UINPUT_PATH, os.O_WRONLY | os.O_NONBLOCK)
         except PermissionError:
-            print("Error: Need root access. Run with 'tsu'")
+            print("Error: Need root access. Run with 'su'")
             sys.exit(1)
         except FileNotFoundError:
             print("Error: /dev/uinput not found. Kernel might not support uinput")
@@ -281,13 +295,6 @@ class WacomDriver:
         if len(data) < 10:
             return None
 
-        # CTL-480 report format (stylus):
-        # [0]: Report ID (usually 0x10 for stylus)
-        # [1]: Status byte (in-range, tip switch, buttons)
-        # [2-3]: X coordinate (little-endian)
-        # [4-5]: Y coordinate (little-endian)
-        # [6-7]: Pressure (little-endian)
-
         report_id = data[0]
 
         # Only handle stylus reports
@@ -347,11 +354,10 @@ class WacomDriver:
 
             # === PRESSURE SCALING (EASIER MAX) ===
             raw_pressure = report['pressure']
-            if raw_pressure > PRESSURE_OFFSET:
-                scaled = (raw_pressure - PRESSURE_OFFSET) / (TABLET_MAX_PRESSURE - PRESSURE_OFFSET)
-                scaled = scaled ** (1.0 / PRESSURE_EASING)  # Inverse power curve
-                pressure_out = int(scaled * TABLET_MAX_PRESSURE)
-                pressure_out = max(PRESSURE_CLAMP_MIN, pressure_out)
+            if raw_pressure > 50:
+                scaled = (raw_pressure - 50) / (1023 - 50)
+                pressure_out = int(scaled * 1087)
+                pressure_out = min(pressure_out, 1087)
             else:
                 pressure_out = 0
             self.uinput.send_event(EV_ABS, ABS_PRESSURE, pressure_out)
@@ -416,7 +422,13 @@ class WacomDriver:
                     continue
                 except usb.core.USBError as e:
                     print(f"USB Error: {e}")
-                    break
+                    print("Waiting 60 seconds for reconnect...")
+                    time.sleep(60)
+                    # Try to reconnect
+                    if self.connect():
+                        print("Reconnected!")
+                    else:
+                        break
 
         except KeyboardInterrupt:
             print("\n\nStopping driver...")
